@@ -1,24 +1,47 @@
 import { io } from "socket.io-client";
 
-const URL = import.meta.env.VITE_SOCKET_URL;
+/**
+ * Backend URL
+ * In local:  VITE_SERVER_URL=http://localhost:5000
+ * In prod :  VITE_SERVER_URL=https://realtime-voice-chat-system.onrender.com
+ */
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
-// ✅ HMR-safe singleton (no duplicate sockets)
-const globalKey = "__VOICE_SOCKET__";
+if (!SERVER_URL) {
+  console.error(
+    "❌ VITE_SERVER_URL is not defined. Check your frontend .env or Vercel env vars."
+  );
+}
+
+// 🔐 HMR-safe singleton (prevents duplicate sockets in Vite)
+const GLOBAL_KEY = "__REALTIME_VOICE_SOCKET__";
 
 export const socket =
-  globalThis[globalKey] ||
-  (globalThis[globalKey] = io(URL, {
+  globalThis[GLOBAL_KEY] ||
+  (globalThis[GLOBAL_KEY] = io(SERVER_URL, {
     autoConnect: true,
     withCredentials: true,
 
-    // ✅ allow fallback + upgrade (prevents "transport close" loops)
+    // ✅ polling first → websocket upgrade (best for Render free tier)
     transports: ["polling", "websocket"],
 
     reconnection: true,
     reconnectionAttempts: 20,
-    reconnectionDelay: 300,
+    reconnectionDelay: 500,
+    timeout: 20000,
   }));
 
-// Optional debug (helps)
-socket.on("connect", () => console.log("✅ client socket connected:", socket.id));
-socket.on("disconnect", (r) => console.log("❌ client socket disconnected:", r));
+// --------------------
+// Debug logs (keep during development)
+// --------------------
+socket.on("connect", () => {
+  console.log("✅ Socket connected:", socket.id);
+});
+
+socket.on("disconnect", (reason) => {
+  console.log("❌ Socket disconnected:", reason);
+});
+
+socket.on("connect_error", (err) => {
+  console.error("❌ Socket connection error:", err.message);
+});
