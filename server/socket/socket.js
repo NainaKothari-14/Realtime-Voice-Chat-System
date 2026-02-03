@@ -24,7 +24,7 @@ export function initSocket(server) {
   io.on("connection", (socket) => {
     roomSocketController(io, socket);
     chatSocketController(io, socket);
-    dmSocketController(io, socket);          // ✅ add
+    dmSocketController(io, socket);   
     presenceSocketController(io, socket);
     webrtcSocketController(io, socket);
     registerCallSocketHandlers(io, socket);

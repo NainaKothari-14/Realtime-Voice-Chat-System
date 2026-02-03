@@ -5,7 +5,7 @@ const onlineUsers = new Map(); // username -> socketId
 export function registerCallSocketHandlers(io, socket) {
   console.log("✅ Call handlers registered for socket:", socket.id);
 
-  // 1️⃣ Register user identity
+  // Register user identity
   socket.on("user:online", ({ name }) => {
     if (!name) return;
     socket.data.username = name;
@@ -14,10 +14,9 @@ export function registerCallSocketHandlers(io, socket) {
     console.log("📊 Online users:", Array.from(onlineUsers.keys()));
   });
 
-  // Helper function
-  const getSocketId = (username) => onlineUsers.get(username);
+  const getSocketId = (username) => onlineUsers.get(username);// Helper to get socket ID by username
 
-  // 2️⃣ Call request (caller initiates)
+  // Call request (caller initiates)
   socket.on("call:request", ({ to }) => {
     const fromUsername = socket.data.username;
     const toSocketId = getSocketId(to);
@@ -35,7 +34,7 @@ export function registerCallSocketHandlers(io, socket) {
     console.log(`✅ Call notification sent to ${to}`);
   });
 
-  // 3️⃣ Accept call
+  // Accept call
   socket.on("call:accept", ({ to }) => {
     const fromUsername = socket.data.username;
     const toSocketId = getSocketId(to);
@@ -47,7 +46,7 @@ export function registerCallSocketHandlers(io, socket) {
     }
   });
 
-  // 4️⃣ Reject call
+  // Reject call
   socket.on("call:reject", ({ to }) => {
     const fromUsername = socket.data.username;
     const toSocketId = getSocketId(to);
@@ -59,7 +58,7 @@ export function registerCallSocketHandlers(io, socket) {
     }
   });
 
-  // 5️⃣ WebRTC Offer
+  // WebRTC Offer
   socket.on("webrtc:offer", ({ to, offer }) => {
     const fromUsername = socket.data.username;
     const toSocketId = getSocketId(to);
@@ -71,7 +70,7 @@ export function registerCallSocketHandlers(io, socket) {
     }
   });
 
-  // 6️⃣ WebRTC Answer
+  // WebRTC Answer
   socket.on("webrtc:answer", ({ to, answer }) => {
     const fromUsername = socket.data.username;
     const toSocketId = getSocketId(to);
@@ -83,7 +82,7 @@ export function registerCallSocketHandlers(io, socket) {
     }
   });
 
-  // 7️⃣ ICE Candidate
+  // ICE(Interactive Connectivity Establishment) Candidate
   socket.on("webrtc:ice", ({ to, candidate }) => {
     const fromUsername = socket.data.username;
     const toSocketId = getSocketId(to);
@@ -93,7 +92,7 @@ export function registerCallSocketHandlers(io, socket) {
     }
   });
 
-  // 8️⃣ End call
+  // End call
   socket.on("call:end", ({ to }) => {
     const fromUsername = socket.data.username;
     const toSocketId = getSocketId(to);
@@ -105,7 +104,7 @@ export function registerCallSocketHandlers(io, socket) {
     }
   });
 
-  // 9️⃣ Cleanup on disconnect
+  // Cleanup on disconnect
   socket.on("disconnect", () => {
     const username = socket.data.username;
     if (username) {

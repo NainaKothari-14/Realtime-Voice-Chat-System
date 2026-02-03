@@ -2,15 +2,15 @@ import { getDMHistory, pushDM } from "../../stores/dm.store.js";
 import { getUserSocket } from "../../stores/presence.store.js";
 import { toggleReaction } from "../../services/reactions.service.js";
 
-const makeDMId = (a, b) => {
+const makeDMId = (a, b) => {// consistent DM ID generator
   const [x, y] = [a, b].sort((m, n) => (m > n ? 1 : -1));
   return `${x}:${y}`;
 };
 
 export function dmSocketController(io, socket) {
-  // ====== DM HISTORY ======
-  socket.on("dm:history", async ({ toUser }) => {
-    const fromUser = socket.data.user?.name;
+  // DM history
+  socket.on("dm:history", async ({ toUser }) => {// fetch DM history
+    const fromUser = socket.data.user?.name;// get sender name
     
     if (!fromUser || !toUser) return;
 
@@ -20,7 +20,7 @@ export function dmSocketController(io, socket) {
     socket.emit("dm:history", { dmId, history });
   });
 
-  // ====== SEND TEXT DM ======
+  //SEND DM message
   socket.on("dm:send", async ({ toUser, text }) => {
     const fromUser = socket.data.user?.name;
     
@@ -29,7 +29,7 @@ export function dmSocketController(io, socket) {
     const clean = (text || "").trim();
     if (!clean) return;
 
-    const dmId = makeDMId(fromUser, toUser);
+    const dmId = makeDMId(fromUser, toUser);// generate DM ID
 
     const msg = {
       id: `${Date.now()}-${Math.random()}`,
@@ -41,7 +41,7 @@ export function dmSocketController(io, socket) {
       createdAt: Date.now(),
     };
 
-    await pushDM(dmId, msg);
+    await pushDM(dmId, msg);// store DM message
 
     // Send to sender
     socket.emit("dm:message", msg);
@@ -53,7 +53,7 @@ export function dmSocketController(io, socket) {
     }
   });
 
-  // ====== SEND VOICE DM ======
+  //SEND VOICE DM
   socket.on("dm:send:voice", async ({ toUser, audio, duration, mimeType }) => {
     const fromUser = socket.data.user?.name;
     
@@ -93,7 +93,7 @@ export function dmSocketController(io, socket) {
     }
   });
 
-  // ====== DM REACTIONS ======
+  // DM REACTIONS
   socket.on("dm:react", async ({ toUser, messageId, emoji }) => {
     const fromUser = socket.data.user?.name;
     
@@ -104,9 +104,9 @@ export function dmSocketController(io, socket) {
     await toggleReaction(dmId, messageId, emoji, fromUser);
 
     // Send to both users
-    socket.emit("dm:reaction", { messageId, emoji, user: fromUser });
+    socket.emit("dm:reaction", { messageId, emoji, user: fromUser });// to sender
     
-    const toSocketId = await getUserSocket(toUser);
+    const toSocketId = await getUserSocket(toUser);//to receiver
     if (toSocketId) {
       io.to(toSocketId).emit("dm:reaction", { messageId, emoji, user: fromUser });
     }
