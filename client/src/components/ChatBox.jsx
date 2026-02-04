@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
-import { useVoiceCall } from "../hooks/usevoiceCall";
 
 const EMOJIS = ["😀", "😂", "🥹", "🔥", "❤️", "👍", "🎧", "🎙️", "✨", "😤"];
 const REACTS = ["👍", "❤️", "😂", "🔥", "😮", "😢"];
@@ -17,6 +16,7 @@ export default function ChatBox({
   isDM = false,
   dmUser = "",
   myName = "",
+  call, // ✅ Receive call from parent (VoiceRoom)
 }) {
   const [text, setText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -30,22 +30,8 @@ export default function ChatBox({
     console.log("🔌 ChatBox socket:", socket?.id, socket);
   }, [socket]);
 
-  // ✅ Voice Call Hook with call logging
-  const handleCallLog = (logData) => {
-    console.log("📞 Call log:", logData);
-    
-    // Send call log message to chat
-    const callMessage = formatCallMessage(logData);
-    if (callMessage && socket) {
-      socket.emit("dm:send", { 
-        toUser: dmUser, 
-        text: callMessage,
-        type: "call-log" 
-      });
-    }
-  };
-
-  const call = useVoiceCall({ socket, myName, onCallLog: handleCallLog });
+  // ❌ REMOVED - This was causing the duplicate declaration error
+  // const call = useVoiceCall({ socket, myName, onCallLog: handleCallLog });
 
   // ✅ Format call log message
   const formatCallMessage = (logData) => {
@@ -182,7 +168,7 @@ export default function ChatBox({
   return (
     <>
       {/* ✅ DM CALL BAR with duration */}
-      {isDM && dmUser && (
+      {isDM && dmUser && call && (
         <div className="dmCallBar">
           <div className="dmCallTitle">Chat with @{dmUser}</div>
 
@@ -215,7 +201,7 @@ export default function ChatBox({
             </div>
           )}
 
-          {socket && call.state === "in-call" && (
+          {socket && call.state === "connected" && (
             <div className="callStatus">
               <div className="callInfo">
                 🔊 In call with @{call.peer}
