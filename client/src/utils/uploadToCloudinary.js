@@ -1,8 +1,8 @@
 // ✅ Cloudinary Upload Utility
 // Usage: import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 
-const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 // File size limits (in bytes)
 const FILE_SIZE_LIMITS = {
