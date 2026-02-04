@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
 import { useVoiceCall } from "../hooks/usevoiceCall";
-import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 
 const EMOJIS = ["😀", "😂", "🥹", "🔥", "❤️", "👍", "🎧", "🎙️", "✨", "😤"];
 const REACTS = ["👍", "❤️", "😂", "🔥", "😮", "😢"];
@@ -18,15 +17,10 @@ export default function ChatBox({
   isDM = false,
   dmUser = "",
   myName = "",
-  roomName = "", // Add room name for non-DM messages
 }) {
   const [text, setText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState(null);
   const endRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const { isRecording, recordingTime, startRecording, stopRecording, cancelRecording } =
     useVoiceRecorder();
@@ -57,6 +51,7 @@ export default function ChatBox({
   const formatCallMessage = (logData) => {
     const { type, direction, duration, timestamp } = logData;
     
+    // Helper to format timestamp
     const getTime = () => {
       if (timestamp) {
         const date = new Date(timestamp);
@@ -117,82 +112,6 @@ export default function ChatBox({
     onTyping?.(false);
   };
 
-  // ✅ File upload handlers
-  const handleFileClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Reset error
-    setUploadError(null);
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    try {
-      console.log("📤 Uploading file:", file.name, file.type, file.size);
-
-      // Upload to Cloudinary with progress tracking
-      const uploaded = await uploadToCloudinary(file, (progress) => {
-        setUploadProgress(progress);
-      });
-
-      console.log("✅ Upload successful:", uploaded);
-
-      // ✅ FIXED: Send file message properly through socket
-      const fileMessage = {
-        type: "file",
-        url: uploaded.secure_url,
-        name: uploaded.original_filename || file.name,
-        mimeType: file.type,
-        size: uploaded.size,
-        width: uploaded.width,
-        height: uploaded.height,
-        category: uploaded.category,
-      };
-
-      console.log("📨 Sending file message:", fileMessage);
-
-      if (isDM && dmUser && socket) {
-        // ✅ DM: Send directly via socket
-        socket.emit("dm:send", {
-          toUser: dmUser,
-          ...fileMessage,
-        });
-        console.log("✅ File sent to DM:", dmUser);
-      } else if (socket) {
-        // ✅ Room message: Send via socket
-        socket.emit("message:send", {
-          room: roomName || "general",
-          ...fileMessage,
-        });
-        console.log("✅ File sent to room:", roomName || "general");
-      } else if (onSend) {
-        // ✅ Fallback: Use onSend callback
-        onSend(fileMessage);
-        console.log("✅ File sent via onSend callback");
-      }
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      setUploadProgress(0);
-      setIsUploading(false);
-    } catch (err) {
-      console.error("❌ Upload failed:", err);
-      setUploadError(err.message);
-      setIsUploading(false);
-      setUploadProgress(0);
-
-      // Auto-clear error after 5 seconds
-      setTimeout(() => setUploadError(null), 5000);
-    }
-  };
-
   // Voice recording handlers
   const handleVoiceStart = () => startRecording();
 
@@ -235,7 +154,7 @@ export default function ChatBox({
       source.buffer = audioBuffer;
 
       const gainNode = audioContext.createGain();
-      gainNode.gain.value = 3.0;
+      gainNode.gain.value = 3.0; // ✅ boost volume
 
       source.connect(gainNode);
       gainNode.connect(audioContext.destination);
@@ -255,13 +174,6 @@ export default function ChatBox({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const formatFileSize = (bytes) => {
-    if (!bytes) return "0 B";
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + " " + sizes[i];
   };
 
   const normalizeName = (name) => (name || "").trim().toLowerCase();
@@ -340,96 +252,6 @@ export default function ChatBox({
                   {m.text}
                 </div>
                 {m.time && <div className="callLogTime">{m.time}</div>}
-              </div>
-            );
-          }
-
-          // ✅ File message rendering
-          if (m.type === "file") {
-            const isMe = myName && m.user && normalizeName(m.user) === normalizeName(myName);
-            const initials = (m.user || "?").slice(0, 2).toUpperCase();
-            const msgReacts = reactions?.[m.id] || {};
-            const hasReactions = Object.keys(msgReacts).length > 0;
-            const isImage = m.mimeType && m.mimeType.startsWith("image/");
-
-            return (
-              <div key={m.id} className={`chatRow ${isMe ? "me" : "other"}`}>
-                {!isMe && (
-                  <div className="chatAvatar" title={m.user}>
-                    {initials}
-                  </div>
-                )}
-
-                <div className="chatContent">
-                  {!isMe && (
-                    <div className="chatMeta">
-                      <span className="chatName">{m.user}</span>
-                      {m.time && <span className="msgTime">{m.time}</span>}
-                    </div>
-                  )}
-
-                  <div className={`chatBubble ${isMe ? "myBubble" : "otherBubble"}`}>
-                    <div className="fileMessage">
-                      {isImage ? (
-                        <a href={m.url} target="_blank" rel="noreferrer" className="fileImageLink">
-                          <img src={m.url} alt={m.name} className="fileImage" />
-                        </a>
-                      ) : (
-                        <a href={m.url} target="_blank" rel="noreferrer" className="fileLink">
-                          <span className="fileIcon">📄</span>
-                          <div className="fileInfo">
-                            <div className="fileName">{m.name}</div>
-                            <div className="fileSize">{formatFileSize(m.size)}</div>
-                          </div>
-                        </a>
-                      )}
-                    </div>
-
-                    {isMe && m.time && <div className="msgTime myTime">{m.time}</div>}
-                  </div>
-
-                  {hasReactions && (
-                    <div className="reactionsDisplay">
-                      {Object.entries(msgReacts).map(([emoji, users]) =>
-                        users.length > 0 ? (
-                          <button
-                            key={emoji}
-                            className={`reactionBubble ${
-                              users.some((u) => normalizeName(u) === normalizeName(myName))
-                                ? "myReaction"
-                                : ""
-                            }`}
-                            onClick={() => onReact?.(m.id, emoji)}
-                            title={users.join(", ")}
-                          >
-                            <span className="reactionEmoji">{emoji}</span>
-                            <span className="reactionCount">{users.length}</span>
-                          </button>
-                        ) : null
-                      )}
-                    </div>
-                  )}
-
-                  {onReact && (
-                    <div className="addReaction">
-                      {REACTS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          className="quickReact"
-                          onClick={() => onReact(m.id, emoji)}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {isMe && (
-                  <div className="chatAvatar myAvatar" title="You">
-                    {initials}
-                  </div>
-                )}
               </div>
             );
           }
@@ -571,23 +393,8 @@ export default function ChatBox({
 
         {!isRecording && (
           <div className="composerBox">
-            {/* ✅ File upload button */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              hidden
-              id="fileUpload"
-              onChange={handleFileSelect}
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-            />
-
-            <button 
-              className="attachBtn" 
-              onClick={handleFileClick}
-              disabled={isUploading}
-              title="Attach file"
-            >
-              {isUploading ? "📤" : "📎"}
+            <button className="attachBtn" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+              🙂
             </button>
 
             <input
@@ -605,48 +412,17 @@ export default function ChatBox({
                   send();
                 }
               }}
-              disabled={isUploading}
             />
 
             {text.trim() ? (
-              <button className="sendBtn" onClick={send} disabled={isUploading}>
+              <button className="sendBtn" onClick={send}>
                 ➤
               </button>
             ) : (
-              <button 
-                className="voiceRecordBtn" 
-                onClick={handleVoiceStart}
-                disabled={isUploading}
-              >
+              <button className="voiceRecordBtn" onClick={handleVoiceStart}>
                 🎙
               </button>
             )}
-          </div>
-        )}
-
-        {/* ✅ Upload progress bar */}
-        {isUploading && (
-          <div className="uploadProgressContainer">
-            <div className="uploadProgressLabel">Uploading... {uploadProgress}%</div>
-            <div className="uploadProgressBar">
-              <div 
-                className="uploadProgressFill" 
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ✅ Upload error message */}
-        {uploadError && (
-          <div className="uploadError">
-            ⚠️ {uploadError}
-            <button 
-              className="closeError" 
-              onClick={() => setUploadError(null)}
-            >
-              ✕
-            </button>
           </div>
         )}
 
@@ -772,155 +548,6 @@ export default function ChatBox({
           font-size: 11px;
           opacity: 0.5;
           margin-top: 2px;
-        }
-
-        /* ✅ File Message Styling */
-        .fileMessage {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 4px;
-        }
-
-        .fileImageLink {
-          display: block;
-          border-radius: 8px;
-          overflow: hidden;
-          max-width: 300px;
-        }
-
-        .fileImage {
-          display: block;
-          max-width: 100%;
-          height: auto;
-          border-radius: 8px;
-        }
-
-        .fileLink {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 8px 12px;
-          background: rgba(88, 101, 242, 0.1);
-          border-radius: 8px;
-          color: inherit;
-          text-decoration: none;
-          transition: all 0.2s;
-          border: 1px solid rgba(88, 101, 242, 0.2);
-        }
-
-        .fileLink:hover {
-          background: rgba(88, 101, 242, 0.15);
-          border-color: rgba(88, 101, 242, 0.3);
-        }
-
-        .fileIcon {
-          font-size: 20px;
-          flex-shrink: 0;
-        }
-
-        .fileInfo {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          min-width: 0;
-        }
-
-        .fileName {
-          font-weight: 500;
-          font-size: 13px;
-          word-break: break-word;
-        }
-
-        .fileSize {
-          font-size: 11px;
-          opacity: 0.6;
-        }
-
-        /* ✅ Upload Progress Bar */
-        .uploadProgressContainer {
-          padding: 8px 16px;
-          border-top: 1px solid rgba(88, 101, 242, 0.1);
-        }
-
-        .uploadProgressLabel {
-          font-size: 12px;
-          opacity: 0.7;
-          margin-bottom: 6px;
-          text-align: center;
-        }
-
-        .uploadProgressBar {
-          width: 100%;
-          height: 4px;
-          background: rgba(88, 101, 242, 0.1);
-          border-radius: 2px;
-          overflow: hidden;
-        }
-
-        .uploadProgressFill {
-          height: 100%;
-          background: linear-gradient(90deg, #5865f2, #7289da);
-          transition: width 0.2s ease;
-        }
-
-        /* ✅ Upload Error Message */
-        .uploadError {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          padding: 8px 12px;
-          margin: 8px 16px 0;
-          background: rgba(215, 58, 73, 0.15);
-          border: 1px solid rgba(215, 58, 73, 0.3);
-          border-radius: 8px;
-          font-size: 12px;
-          color: #ff6b6b;
-        }
-
-        .closeError {
-          background: none;
-          border: none;
-          color: #ff6b6b;
-          cursor: pointer;
-          font-size: 16px;
-          padding: 0;
-          display: flex;
-          align-items: center;
-        }
-
-        .closeError:hover {
-          opacity: 0.8;
-        }
-
-        .attachBtn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 18px;
-          padding: 0;
-          transition: transform 0.2s;
-        }
-
-        .attachBtn:hover:not(:disabled) {
-          transform: scale(1.1);
-        }
-
-        .attachBtn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .composerInput:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .sendBtn:disabled,
-        .voiceRecordBtn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
         }
       `}</style>
     </>
