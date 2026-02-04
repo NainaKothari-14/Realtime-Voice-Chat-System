@@ -26,7 +26,7 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ✅ GLOBAL INCOMING CALL STATE
-  const [incomingCall, setIncomingCall] = useState(null); // { from: "username", callId: "..." }
+  const [incomingCall, setIncomingCall] = useState(null); // { from: "username" }
 
   // voice
   const [muted, setMuted] = useState(false);
@@ -41,11 +41,19 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
   // Helper: normalize names for comparison
   const normalizeName = (name) => (name || "").trim().toLowerCase();
 
+  // ✅ REGISTER USER ONLINE STATUS
+  useEffect(() => {
+    if (!socket || !myName) return;
+
+    socket.emit("user:online", { name: myName });
+    console.log("✅ Registered as online:", myName);
+  }, [socket, myName]);
+
   // ✅ JOIN THE SELECTED ROOM (with guard)
   useEffect(() => {
     if (!socket || !roomId || !myName) return;
 
-    if (joinedRef.current) return; // ✅ prevents repeated joins
+    if (joinedRef.current) return;
     joinedRef.current = true;
 
     console.log("🚪 Joining room:", roomId);
@@ -76,7 +84,7 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     }
   });
 
-  // ✅ FIXED: Update known users with proper structure handling
+  // ✅ Update known users
   useEffect(() => {
     const newNames = users
       .map(u => u?.user?.name || u?.name)
@@ -87,8 +95,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
       const combined = [...new Set([...prev, ...newNames])];
       const filtered = combined.filter(n => normalizeName(n) !== normalizeName(myName));
       localStorage.setItem("vc_known_users", JSON.stringify(filtered));
-      
-      console.log("📋 Known users updated:", filtered);
       return filtered;
     });
   }, [users, myName]);
@@ -99,21 +105,19 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
 
     const handleIncomingCall = (data) => {
       console.log("📞 Incoming call received:", data);
-      setIncomingCall({ from: data.from, callId: data.callId || Date.now() });
+      setIncomingCall({ from: data.from });
       
-      // Play notification sound (optional)
+      // Play notification sound
       try {
         const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjKM0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+mdrzzn0pBSh+zPLaizsIGGS57+mjUBELTKXh8LljHAU2jdXzzn4qBSh+y/PbiTUIGGW78OWdSg8NUqnn8bJfGQlBmtvzzH4pBSV9y/LbjDgHF2W88OScSQ8NUqnn8bJeGAlAmtvzzX8pBSZ+y/PcizsIGGa88OWcSg4NUarn8bJeGQlAmNzzzYArBSV9y/LbjDkHGGS88OScSQ4MUqrm8bFgGglAmNzzzH8qBSV+y/PaiDwIGGW78OWdSg4NUqnn8bJeGAlAmtvzzH4qBSh+yvLbiDwHGGa78OSdSg4NUqnn8bJeGAlBmtzzzH4pBSh+yvLaiDwHGGa78OSdSg4NUqrm8bFgGglBmdzzzH4pBSh+yvLaiDsHGGa88OSdSg4NUqvn8bFeGQlBmdzzzH8pBSh+y/LbiDsHF2a88OSdSg4MUqvm8bFfGQlAmNzzzH4pBSh+y/LbiDsHGGa88OSdSg4NUqvn8bFfGQlBmdzzzX8pBSh+y/LbiDsHGGW88OSdSg4MUqvm8bFfGQlBmdzzzH4pBSh+y/LaiDwHGGa88OWdSg4NUqvn8bFfGQlAmNzzzH4pBSh+y/LaiDwHGGa88OWdSg4NUqvn8bFeGQlBmdzzzH4pBSh+yvLbiDwHGGa88OWdSg4NUqvn8bFeGQlAmdzzzH4pBSh+y/LciDwHGGa88OWdSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQ==');
         audio.play().catch(() => {});
-      } catch (e) {
-        console.log("Could not play notification sound");
-      }
+      } catch (e) {}
     };
 
-    socket.on("voice:incoming", handleIncomingCall);
+    socket.on("call:incoming", handleIncomingCall);
 
     return () => {
-      socket.off("voice:incoming", handleIncomingCall);
+      socket.off("call:incoming", handleIncomingCall);
     };
   }, [socket]);
 
@@ -121,30 +125,24 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
   const acceptGlobalCall = () => {
     if (!incomingCall) return;
     
-    // Switch to the caller's DM
     const callerName = incomingCall.from;
+    console.log("✅ Accepting call from:", callerName);
+    
+    socket.emit("call:accept", { to: callerName });
+    
     setView("dm");
     setActiveDMUser(callerName);
     setSidebarOpen(false);
-    
-    // Load DM history
     socket.emit("dm:history", { toUser: callerName });
-    
-    // Clear the incoming call notification
     setIncomingCall(null);
-    
-    // The ChatBox component will handle accepting the call via useVoiceCall hook
-    // We need to trigger acceptance after a short delay to ensure ChatBox is ready
-    setTimeout(() => {
-      socket.emit("voice:accept", { from: callerName });
-    }, 100);
   };
 
   // ✅ REJECT GLOBAL INCOMING CALL
   const rejectGlobalCall = () => {
     if (!incomingCall) return;
     
-    socket.emit("voice:reject", { from: incomingCall.from });
+    console.log("❌ Rejecting call from:", incomingCall.from);
+    socket.emit("call:reject", { to: incomingCall.from });
     setIncomingCall(null);
   };
 
@@ -166,7 +164,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     const onDMHistory = ({ history }) => Array.isArray(history) && setDmMessages(history);
     const onDMMessage = (msg) => setDmMessages((p) => [...p, msg]);
 
-    // Reaction handlers
     const onReaction = ({ messageId, emoji, user }) => {
       setReactions((prev) => {
         const msgReacts = prev[messageId] || {};
@@ -222,7 +219,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     socket.on("chat:message", onMessage);
     socket.on("chat:typing:status", onTypingStatus);
     socket.on("chat:reaction", onReaction);
-
     socket.on("dm:history", onDMHistory);
     socket.on("dm:message", onDMMessage);
     socket.on("dm:reaction", onDMReaction);
@@ -233,18 +229,15 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
       socket.off("chat:message", onMessage);
       socket.off("chat:typing:status", onTypingStatus);
       socket.off("chat:reaction", onReaction);
-
       socket.off("dm:history", onDMHistory);
       socket.off("dm:message", onDMMessage);
       socket.off("dm:reaction", onDMReaction);
     };
   }, [socket]);
 
-  // typing text only for room
   const typingUsers = [...new Set(Object.values(typingMap))].filter(Boolean);
   const typingText = typingUsers.length ? `${typingUsers.join(", ")} typing…` : "";
 
-  // time formatting
   const roomUIMessages = messages.map((m) => ({
     ...m,
     time: m.createdAt ? new Date(m.createdAt).toLocaleTimeString() : "",
@@ -258,7 +251,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
   const displayMessages = view === "dm" ? dmUIMessages : roomUIMessages;
   const displayReactions = view === "dm" ? dmReactions : reactions;
 
-  // send message
   const sendMessage = (text) => {
     if (!joined) return alert("Join a room first");
 
@@ -274,40 +266,21 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     socket.emit("chat:send", { text });
   };
 
-  // send voice message
   const sendVoiceMessage = (voiceData) => {
-    console.log("📨 VoiceRoom received voice data:", voiceData);
-    
-    if (!joined) {
-      alert("Join a room first");
-      return;
-    }
+    if (!joined) return alert("Join a room first");
 
     if (view === "dm") {
-      if (!activeDMUser) {
-        alert("Pick a user to DM");
-        return;
-      }
+      if (!activeDMUser) return alert("Pick a user to DM");
       if (normalizeName(activeDMUser) === normalizeName(myName)) {
-        alert("You can't DM yourself! 😭");
-        return;
+        return alert("You can't DM yourself! 😭");
       }
-      
-      console.log("📤 Emitting dm:send:voice to:", activeDMUser);
-      socket.emit("dm:send:voice", { 
-        toUser: activeDMUser, 
-        ...voiceData 
-      });
-      console.log("✅ Voice DM sent");
+      socket.emit("dm:send:voice", { toUser: activeDMUser, ...voiceData });
       return;
     }
 
-    console.log("📤 Emitting chat:send:voice to room");
     socket.emit("chat:send:voice", voiceData);
-    console.log("✅ Voice message sent to room");
   };
 
-  // handle reactions
   const handleReact = (messageId, emoji) => {
     if (!joined) return;
 
@@ -320,14 +293,12 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     socket.emit("chat:react", { messageId, emoji });
   };
 
-  // typing only in room
   const setTyping = (isTyping) => {
     if (!joined) return;
     if (view !== "room") return;
     socket.emit("chat:typing", { isTyping });
   };
 
-  // open dm
   const openDM = (name) => {
     if (!name) return;
     
@@ -348,7 +319,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     setSidebarOpen(false);
   };
 
-  // mute
   const toggleMute = () => {
     if (!localStream) return alert("Mic not ready yet");
 
@@ -359,7 +329,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     });
   };
 
-  // disconnect function
   const handleDisconnect = () => {
     if (confirm("Are you sure you want to leave the room?")) {
       if (localStream) {
@@ -385,37 +354,24 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
     }
   };
 
-  // ✅ FIXED: Create online users set with proper normalization
   const onlineUsersSet = useMemo(() => {
     const names = users
       .map((u) => u?.user?.name || u?.name)
       .filter(Boolean)
       .map((n) => (n || "").trim().toLowerCase());
-
     return new Set(names);
   }, [users]);
 
-  // ✅ Helper to check if user is online
   const isUserOnline = (name) =>
     onlineUsersSet.has((name || "").trim().toLowerCase());
 
-  // ✅ FIXED: Use knownUsers with fallback to current online users
   const dmUsers = useMemo(() => {
-    // Combine known users with current online users
     const allUsers = [...new Set([...knownUsers, ...Array.from(onlineUsersSet)])];
-    
-    // Filter out self
     return allUsers.filter(n => normalizeName(n) !== normalizeName(myName));
   }, [knownUsers, onlineUsersSet, myName]);
 
-  // ✅ Debug logs
-  console.log("USERS RAW:", users);
-  console.log("ONLINE SET:", [...onlineUsersSet]);
-  console.log("DM USERS:", dmUsers);
-
   return (
     <div className="appShell">
-      {/* ✅ GLOBAL INCOMING CALL NOTIFICATION */}
       {incomingCall && (
         <div className="globalCallNotification">
           <div className="callNotificationCard">
@@ -568,10 +524,7 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
 
       <div className="main">
         <div className="topbar">
-          <button
-            className="menuBtn"
-            onClick={() => setSidebarOpen(true)}
-          >
+          <button className="menuBtn" onClick={() => setSidebarOpen(true)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
             </svg>
@@ -596,7 +549,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
             )}
           </div>
 
-          {/* User Badge - Shows logged in user */}
           <div className="currentUserBadge">
             <div className="avatar tiny">
               {myName.slice(0, 2).toUpperCase()}
@@ -604,11 +556,7 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
             <span className="currentUserName">{myName}</span>
           </div>
 
-          <button 
-            className="voiceBtn topbar-disconnect" 
-            onClick={handleDisconnect} 
-            title="Leave Room"
-          >
+          <button className="voiceBtn topbar-disconnect" onClick={handleDisconnect} title="Leave Room">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
             </svg>
@@ -631,7 +579,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
       </div>
 
       <style>{`
-        /* ===== GLOBAL CALL NOTIFICATION ===== */
         .globalCallNotification {
           position: fixed;
           top: 0;
@@ -645,36 +592,22 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
           align-items: center;
           justify-content: center;
           padding: 20px;
-          animation: fadeIn 0.2s ease-out;
+          animation: fadeIn 0.2s;
         }
 
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         @keyframes slideUp {
-          from {
-            transform: translateY(20px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         @keyframes pulse {
-          0%, 100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.1);
-          }
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
         }
 
         .callNotificationCard {
@@ -684,9 +617,8 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
           padding: 32px;
           max-width: 400px;
           width: 100%;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 
-                      0 0 0 1px rgba(255, 255, 255, 0.05);
-          animation: slideUp 0.3s ease-out;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+          animation: slideUp 0.3s;
         }
 
         .callNotificationHeader {
@@ -705,7 +637,7 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
           font-size: 32px;
           background: linear-gradient(135deg, #5865f2, #7289da);
           border-radius: 50%;
-          animation: pulse 2s ease-in-out infinite;
+          animation: pulse 2s infinite;
           box-shadow: 0 0 20px rgba(88, 101, 242, 0.4);
         }
 
@@ -758,13 +690,8 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
         }
 
         .acceptCallBtn:hover {
-          background: linear-gradient(135deg, #26843a, #2ea043);
           transform: translateY(-2px);
           box-shadow: 0 6px 16px rgba(46, 160, 67, 0.4);
-        }
-
-        .acceptCallBtn:active {
-          transform: translateY(0);
         }
 
         .rejectCallBtn {
@@ -774,16 +701,10 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
         }
 
         .rejectCallBtn:hover {
-          background: linear-gradient(135deg, #c12838, #d73a49);
           transform: translateY(-2px);
           box-shadow: 0 6px 16px rgba(215, 58, 73, 0.4);
         }
 
-        .rejectCallBtn:active {
-          transform: translateY(0);
-        }
-
-        /* ===== USER BADGE STYLING ===== */
         .currentUserBadge {
           display: flex;
           align-items: center;
@@ -799,7 +720,6 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
         .currentUserName {
           font-size: 14px;
           font-weight: 600;
-          color: var(--text-normal);
         }
 
         .avatar.tiny {
@@ -811,282 +731,15 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
 
         .topbar-disconnect {
           background: var(--danger);
-          margin-left: 0;
         }
 
-        /* ===== MOBILE IMPROVEMENTS ===== */
         @media (max-width: 768px) {
-          .globalCallNotification {
-            padding: 16px;
-          }
-
-          .callNotificationCard {
-            padding: 24px;
-          }
-
-          .callingIcon {
-            width: 56px;
-            height: 56px;
-            font-size: 28px;
-          }
-
-          .callNotificationCaller {
-            font-size: 24px;
-          }
-
-          .callNotificationActions {
-            flex-direction: column;
-          }
-
-          .acceptCallBtn,
-          .rejectCallBtn {
-            padding: 14px;
-            font-size: 15px;
-          }
-
-          /* Hide user badge text on mobile, keep avatar */
-          .currentUserName {
-            display: none;
-          }
-
-          .currentUserBadge {
-            padding: 6px;
-            margin-right: 8px;
-            background: transparent;
-            border: none;
-          }
-
-          /* Make disconnect button visible on mobile */
-          .topbar-disconnect {
-            display: flex !important;
-          }
-
-          /* Adjust topbar spacing */
-          .topbar {
-            padding: 12px;
-            gap: 8px;
-          }
-
-          .channelInfo {
-            flex: 1;
-            min-width: 0;
-          }
-
-          .channelTitle {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          /* Improve sidebar on mobile */
-          .sidebar {
-            width: 280px;
-          }
-
-          .sidebar.open {
-            width: 280px;
-          }
-
-          /* Better voice panel on mobile */
-          .voicePanel {
-            padding: 12px;
-          }
-
-          .voiceControls {
-            gap: 8px;
-          }
-
-          .voiceBtn {
-            flex: 1;
-            min-width: 0;
-          }
-
-          /* Improve scrolling areas */
-          .sidebarScroll {
-            -webkit-overflow-scrolling: touch;
-          }
-
-          /* Better avatar sizes on mobile */
-          .avatar {
-            width: 36px;
-            height: 36px;
-            font-size: 14px;
-          }
-
-          .avatar.small {
-            width: 28px;
-            height: 28px;
-            font-size: 12px;
-          }
-
-          /* Improve user items */
-          .userItem {
-            padding: 10px 12px;
-          }
-
-          .userName {
-            font-size: 15px;
-          }
-
-          .userStatus {
-            font-size: 12px;
-          }
-
-          /* Better section labels */
-          .sectionLabel {
-            font-size: 11px;
-            padding: 16px 12px 8px;
-          }
-
-          /* Improve menu button */
-          .menuBtn {
-            padding: 8px;
-          }
-
-          /* Better status dots */
-          .statusDot {
-            width: 10px;
-            height: 10px;
-            border-width: 2px;
-          }
-        }
-
-        /* ===== SMALL MOBILE (< 400px) ===== */
-        @media (max-width: 400px) {
-          .callNotificationCard {
-            padding: 20px;
-          }
-
-          .callNotificationHeader {
-            margin-bottom: 20px;
-          }
-
-          .callingIcon {
-            width: 48px;
-            height: 48px;
-            font-size: 24px;
-          }
-
-          .callNotificationTitle {
-            font-size: 14px;
-          }
-
-          .callNotificationCaller {
-            font-size: 20px;
-          }
-
-          .sidebar {
-            width: 260px;
-          }
-
-          .sidebar.open {
-            width: 260px;
-          }
-
-          .sidebarHeader {
-            font-size: 15px;
-            padding: 14px 12px;
-          }
-
-          .voiceHeader {
-            font-size: 12px;
-          }
-
-          .voiceStatus {
-            font-size: 12px;
-          }
-
-          .currentUserBadge .avatar.tiny {
-            width: 28px;
-            height: 28px;
-            font-size: 11px;
-          }
-        }
-
-        /* ===== LANDSCAPE MOBILE ===== */
-        @media (max-width: 768px) and (orientation: landscape) {
-          .globalCallNotification {
-            padding: 12px;
-          }
-
-          .callNotificationCard {
-            padding: 20px;
-            max-width: 500px;
-          }
-
-          .callNotificationActions {
-            flex-direction: row;
-          }
-
-          .sidebar {
-            width: 240px;
-          }
-
-          .sidebar.open {
-            width: 240px;
-          }
-
-          .voicePanel {
-            padding: 8px;
-          }
-
-          .sectionLabel {
-            padding: 12px 8px 6px;
-          }
-        }
-
-        /* ===== TABLET IMPROVEMENTS ===== */
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .currentUserBadge {
-            padding: 8px 14px;
-          }
-
-          .currentUserName {
-            font-size: 15px;
-          }
-        }
-
-        /* ===== TOUCH IMPROVEMENTS ===== */
-        @media (hover: none) and (pointer: coarse) {
-          /* Better touch targets */
-          .userItem,
-          .channelItem,
-          .voiceBtn,
-          .menuBtn,
-          .serverDot,
-          .acceptCallBtn,
-          .rejectCallBtn {
-            min-height: 44px;
-            min-width: 44px;
-          }
-
-          /* Prevent text selection on buttons */
-          .userItem,
-          .channelItem,
-          .voiceBtn,
-          .menuBtn,
-          .serverDot,
-          .currentUserBadge,
-          .acceptCallBtn,
-          .rejectCallBtn {
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-          }
-
-          /* Better active states */
-          .userItem:active,
-          .channelItem:active {
-            transform: scale(0.98);
-            transition: transform 0.1s;
-          }
-
-          .voiceBtn:active,
-          .acceptCallBtn:active,
-          .rejectCallBtn:active {
-            transform: scale(0.95);
-            transition: transform 0.1s;
-          }
+          .callNotificationCard { padding: 24px; }
+          .callingIcon { width: 56px; height: 56px; font-size: 28px; }
+          .callNotificationCaller { font-size: 24px; }
+          .callNotificationActions { flex-direction: column; }
+          .currentUserName { display: none; }
+          .currentUserBadge { padding: 6px; background: transparent; border: none; }
         }
       `}</style>
     </div>
