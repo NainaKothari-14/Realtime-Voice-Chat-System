@@ -25,6 +25,9 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
   // ui
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // ✅ GLOBAL INCOMING CALL STATE
+  const [incomingCall, setIncomingCall] = useState(null); // { from: "username", callId: "..." }
+
   // voice
   const [muted, setMuted] = useState(false);
   const { stream: localStream } = useLocalAudio();
@@ -89,6 +92,61 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
       return filtered;
     });
   }, [users, myName]);
+
+  // ✅ LISTEN FOR INCOMING CALLS GLOBALLY
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleIncomingCall = (data) => {
+      console.log("📞 Incoming call received:", data);
+      setIncomingCall({ from: data.from, callId: data.callId || Date.now() });
+      
+      // Play notification sound (optional)
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjKM0fPTgjMGHm7A7+OZSA0PVqzn77BdGAg+mdrzzn0pBSh+zPLaizsIGGS57+mjUBELTKXh8LljHAU2jdXzzn4qBSh+y/PbiTUIGGW78OWdSg8NUqnn8bJfGQlBmtvzzH4pBSV9y/LbjDgHF2W88OScSQ8NUqnn8bJeGAlAmtvzzX8pBSZ+y/PcizsIGGa88OWcSg4NUarn8bJeGQlAmNzzzYArBSV9y/LbjDkHGGS88OScSQ4MUqrm8bFgGglAmNzzzH8qBSV+y/PaiDwIGGW78OWdSg4NUqnn8bJeGAlAmtvzzH4qBSh+yvLbiDwHGGa78OSdSg4NUqnn8bJeGAlBmtzzzH4pBSh+yvLaiDwHGGa78OSdSg4NUqrm8bFgGglBmdzzzH4pBSh+yvLaiDsHGGa88OSdSg4NUqvn8bFeGQlBmdzzzH8pBSh+y/LbiDsHF2a88OSdSg4MUqvm8bFfGQlAmNzzzH4pBSh+y/LbiDsHGGa88OSdSg4NUqvn8bFfGQlBmdzzzX8pBSh+y/LbiDsHGGW88OSdSg4MUqvm8bFfGQlBmdzzzH4pBSh+y/LaiDwHGGa88OWdSg4NUqvn8bFfGQlAmNzzzH4pBSh+y/LaiDwHGGa88OWdSg4NUqvn8bFeGQlBmdzzzH4pBSh+yvLbiDwHGGa88OWdSg4NUqvn8bFeGQlAmdzzzH4pBSh+y/LciDwHGGa88OWdSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQlBmdzzzH8pBSh+y/LbiDwHGGa88OScSg4MUqvm8bFfGQ==');
+        audio.play().catch(() => {});
+      } catch (e) {
+        console.log("Could not play notification sound");
+      }
+    };
+
+    socket.on("voice:incoming", handleIncomingCall);
+
+    return () => {
+      socket.off("voice:incoming", handleIncomingCall);
+    };
+  }, [socket]);
+
+  // ✅ ACCEPT GLOBAL INCOMING CALL
+  const acceptGlobalCall = () => {
+    if (!incomingCall) return;
+    
+    // Switch to the caller's DM
+    const callerName = incomingCall.from;
+    setView("dm");
+    setActiveDMUser(callerName);
+    setSidebarOpen(false);
+    
+    // Load DM history
+    socket.emit("dm:history", { toUser: callerName });
+    
+    // Clear the incoming call notification
+    setIncomingCall(null);
+    
+    // The ChatBox component will handle accepting the call via useVoiceCall hook
+    // We need to trigger acceptance after a short delay to ensure ChatBox is ready
+    setTimeout(() => {
+      socket.emit("voice:accept", { from: callerName });
+    }, 100);
+  };
+
+  // ✅ REJECT GLOBAL INCOMING CALL
+  const rejectGlobalCall = () => {
+    if (!incomingCall) return;
+    
+    socket.emit("voice:reject", { from: incomingCall.from });
+    setIncomingCall(null);
+  };
 
   // listeners
   useEffect(() => {
@@ -318,6 +376,7 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
       setDmReactions({});
       setView("room");
       setActiveDMUser(null);
+      setIncomingCall(null);
 
       setTimeout(() => {
         socket.disconnect();
@@ -356,6 +415,35 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
 
   return (
     <div className="appShell">
+      {/* ✅ GLOBAL INCOMING CALL NOTIFICATION */}
+      {incomingCall && (
+        <div className="globalCallNotification">
+          <div className="callNotificationCard">
+            <div className="callNotificationHeader">
+              <div className="callingIcon">📞</div>
+              <div className="callNotificationInfo">
+                <div className="callNotificationTitle">Incoming Call</div>
+                <div className="callNotificationCaller">@{incomingCall.from}</div>
+              </div>
+            </div>
+            <div className="callNotificationActions">
+              <button className="acceptCallBtn" onClick={acceptGlobalCall}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
+                </svg>
+                Accept
+              </button>
+              <button className="rejectCallBtn" onClick={rejectGlobalCall}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+                </svg>
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="serverBar">
         <div className={`serverDot ${view === "room" ? "active" : ""}`} onClick={openRoom}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -543,6 +631,158 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
       </div>
 
       <style>{`
+        /* ===== GLOBAL CALL NOTIFICATION ===== */
+        .globalCallNotification {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(4px);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.1);
+          }
+        }
+
+        .callNotificationCard {
+          background: linear-gradient(135deg, rgba(30, 33, 36, 0.98), rgba(40, 43, 48, 0.98));
+          border: 2px solid rgba(88, 101, 242, 0.3);
+          border-radius: 20px;
+          padding: 32px;
+          max-width: 400px;
+          width: 100%;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 
+                      0 0 0 1px rgba(255, 255, 255, 0.05);
+          animation: slideUp 0.3s ease-out;
+        }
+
+        .callNotificationHeader {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .callingIcon {
+          width: 64px;
+          height: 64px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 32px;
+          background: linear-gradient(135deg, #5865f2, #7289da);
+          border-radius: 50%;
+          animation: pulse 2s ease-in-out infinite;
+          box-shadow: 0 0 20px rgba(88, 101, 242, 0.4);
+        }
+
+        .callNotificationInfo {
+          flex: 1;
+        }
+
+        .callNotificationTitle {
+          font-size: 16px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.6);
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .callNotificationCaller {
+          font-size: 28px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .callNotificationActions {
+          display: flex;
+          gap: 12px;
+        }
+
+        .acceptCallBtn,
+        .rejectCallBtn {
+          flex: 1;
+          padding: 16px;
+          border: none;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .acceptCallBtn {
+          background: linear-gradient(135deg, #2ea043, #3fb950);
+          color: white;
+          box-shadow: 0 4px 12px rgba(46, 160, 67, 0.3);
+        }
+
+        .acceptCallBtn:hover {
+          background: linear-gradient(135deg, #26843a, #2ea043);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(46, 160, 67, 0.4);
+        }
+
+        .acceptCallBtn:active {
+          transform: translateY(0);
+        }
+
+        .rejectCallBtn {
+          background: linear-gradient(135deg, #d73a49, #f85149);
+          color: white;
+          box-shadow: 0 4px 12px rgba(215, 58, 73, 0.3);
+        }
+
+        .rejectCallBtn:hover {
+          background: linear-gradient(135deg, #c12838, #d73a49);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(215, 58, 73, 0.4);
+        }
+
+        .rejectCallBtn:active {
+          transform: translateY(0);
+        }
+
         /* ===== USER BADGE STYLING ===== */
         .currentUserBadge {
           display: flex;
@@ -576,6 +816,34 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
 
         /* ===== MOBILE IMPROVEMENTS ===== */
         @media (max-width: 768px) {
+          .globalCallNotification {
+            padding: 16px;
+          }
+
+          .callNotificationCard {
+            padding: 24px;
+          }
+
+          .callingIcon {
+            width: 56px;
+            height: 56px;
+            font-size: 28px;
+          }
+
+          .callNotificationCaller {
+            font-size: 24px;
+          }
+
+          .callNotificationActions {
+            flex-direction: column;
+          }
+
+          .acceptCallBtn,
+          .rejectCallBtn {
+            padding: 14px;
+            font-size: 15px;
+          }
+
           /* Hide user badge text on mobile, keep avatar */
           .currentUserName {
             display: none;
@@ -685,6 +953,28 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
 
         /* ===== SMALL MOBILE (< 400px) ===== */
         @media (max-width: 400px) {
+          .callNotificationCard {
+            padding: 20px;
+          }
+
+          .callNotificationHeader {
+            margin-bottom: 20px;
+          }
+
+          .callingIcon {
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+          }
+
+          .callNotificationTitle {
+            font-size: 14px;
+          }
+
+          .callNotificationCaller {
+            font-size: 20px;
+          }
+
           .sidebar {
             width: 260px;
           }
@@ -715,6 +1005,19 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
 
         /* ===== LANDSCAPE MOBILE ===== */
         @media (max-width: 768px) and (orientation: landscape) {
+          .globalCallNotification {
+            padding: 12px;
+          }
+
+          .callNotificationCard {
+            padding: 20px;
+            max-width: 500px;
+          }
+
+          .callNotificationActions {
+            flex-direction: row;
+          }
+
           .sidebar {
             width: 240px;
           }
@@ -750,7 +1053,9 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
           .channelItem,
           .voiceBtn,
           .menuBtn,
-          .serverDot {
+          .serverDot,
+          .acceptCallBtn,
+          .rejectCallBtn {
             min-height: 44px;
             min-width: 44px;
           }
@@ -761,7 +1066,9 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
           .voiceBtn,
           .menuBtn,
           .serverDot,
-          .currentUserBadge {
+          .currentUserBadge,
+          .acceptCallBtn,
+          .rejectCallBtn {
             -webkit-user-select: none;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
@@ -774,7 +1081,9 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
             transition: transform 0.1s;
           }
 
-          .voiceBtn:active {
+          .voiceBtn:active,
+          .acceptCallBtn:active,
+          .rejectCallBtn:active {
             transform: scale(0.95);
             transition: transform 0.1s;
           }
