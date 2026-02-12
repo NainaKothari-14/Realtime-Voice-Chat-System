@@ -9,6 +9,7 @@ export default function JoinRoom({ onJoin }) {
   const join = () => {
     if (!name.trim()) return alert("Enter your name");
 
+    // ✅ CRITICAL FIX: Save to localStorage so VoiceRoom can identify you
     localStorage.setItem("vc_name", name.trim());
 
     socket.emit("room:join", {
@@ -29,32 +30,12 @@ export default function JoinRoom({ onJoin }) {
       <div style={styles.leftPanel}>
         <div style={styles.logoSection}>
           <div style={styles.logo}>
-            {/* Improved microphone icon with better detail and clarity */}
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-              <line x1="8" y1="23" x2="16" y2="23"/>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="white">
+              <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
             </svg>
           </div>
           <h1 style={styles.brandTitle}>VoiceChat</h1>
           <p style={styles.brandSubtitle}>Connect • Chat • Collaborate</p>
-          
-          {/* Feature highlights */}
-          <div style={styles.features}>
-            <div style={styles.feature}>
-              <span style={styles.featureIcon}>💬</span>
-              <span>Real-time messaging</span>
-            </div>
-            <div style={styles.feature}>
-              <span style={styles.featureIcon}>🎙️</span>
-              <span>Voice channels</span>
-            </div>
-            <div style={styles.feature}>
-              <span style={styles.featureIcon}>📞</span>
-              <span>Video calls</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -98,7 +79,7 @@ export default function JoinRoom({ onJoin }) {
               style={styles.button}
               onClick={join}
             >
-              Join Room
+              Join
             </button>
 
             <div style={styles.hint}>
@@ -115,37 +96,17 @@ export default function JoinRoom({ onJoin }) {
           to { opacity: 1; transform: translateY(0); }
         }
 
-        @keyframes pulse {
-          0%, 100% { 
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% { 
-            transform: scale(1.05);
-            opacity: 0.8;
-          }
-        }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-
         input:focus {
           outline: none;
           border-color: #5865f2 !important;
-          box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.1);
         }
 
         button:hover {
           background: #4752c4 !important;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(88, 101, 242, 0.4);
         }
 
         button:active {
-          transform: translateY(0px);
-          box-shadow: 0 2px 4px rgba(88, 101, 242, 0.2);
+          transform: translateY(1px);
         }
 
         @media (max-width: 768px) {
@@ -161,7 +122,6 @@ const styles = {
     minHeight: "100vh",
     display: "flex",
     background: "#313338",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
   },
   leftPanel: {
     flex: 1,
@@ -169,61 +129,34 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     padding: "40px",
-    background: "linear-gradient(135deg, #5865f2 0%, #4752c4 100%)",
-    position: "relative",
-    overflow: "hidden",
+    background: "#5865f2",
   },
   logoSection: {
     textAlign: "center",
-    maxWidth: "450px",
-    zIndex: 1,
+    maxWidth: "400px",
   },
   logo: {
-    width: "120px",
-    height: "120px",
+    width: "100px",
+    height: "100px",
     margin: "0 auto 30px",
-    background: "rgba(255, 255, 255, 0.15)",
+    background: "rgba(255, 255, 255, 0.1)",
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     backdropFilter: "blur(10px)",
-    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-    animation: "float 3s ease-in-out infinite",
   },
   brandTitle: {
-    fontSize: "52px",
+    fontSize: "48px",
     fontWeight: "800",
     color: "white",
     margin: "0 0 16px",
-    letterSpacing: "-1.5px",
-    textShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+    letterSpacing: "-1px",
   },
   brandSubtitle: {
-    fontSize: "20px",
-    color: "rgba(255, 255, 255, 0.9)",
-    margin: "0 0 40px",
-    fontWeight: "500",
-  },
-  features: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-    marginTop: "40px",
-  },
-  feature: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    color: "rgba(255, 255, 255, 0.95)",
-    fontSize: "16px",
-    padding: "12px 20px",
-    background: "rgba(255, 255, 255, 0.1)",
-    borderRadius: "8px",
-    backdropFilter: "blur(5px)",
-  },
-  featureIcon: {
-    fontSize: "24px",
+    fontSize: "18px",
+    color: "rgba(255, 255, 255, 0.8)",
+    margin: 0,
   },
   rightPanel: {
     flex: 1,
@@ -235,17 +168,16 @@ const styles = {
     background: "#313338",
   },
   formCard: {
-    background: "#2b2d31",
-    borderRadius: "12px",
-    padding: "40px",
+    background: "#313338",
+    borderRadius: "8px",
+    padding: "32px",
     width: "100%",
     maxWidth: "480px",
-    animation: "fadeIn 0.5s ease",
-    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+    animation: "fadeIn 0.4s ease",
   },
   title: {
-    fontSize: "28px",
-    fontWeight: "700",
+    fontSize: "24px",
+    fontWeight: "600",
     color: "#f2f3f5",
     margin: "0 0 8px",
     textAlign: "center",
@@ -253,46 +185,46 @@ const styles = {
   subtitle: {
     fontSize: "16px",
     color: "#b5bac1",
-    margin: "0 0 32px",
+    margin: "0 0 20px",
     textAlign: "center",
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: "24px",
+    gap: "20px",
   },
   inputGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: "8px",
   },
   label: {
     fontSize: "12px",
     fontWeight: "700",
     color: "#b5bac1",
     textTransform: "uppercase",
-    letterSpacing: "0.8px",
+    letterSpacing: "0.5px",
   },
   input: {
     width: "100%",
-    padding: "12px 14px",
+    padding: "10px",
     fontSize: "16px",
     border: "1px solid #1e1f22",
-    borderRadius: "6px",
+    borderRadius: "4px",
     background: "#1e1f22",
     color: "#dbdee1",
-    transition: "all 0.2s ease",
+    transition: "border-color 0.2s ease",
     fontFamily: "inherit",
   },
   button: {
     width: "100%",
-    padding: "14px",
+    padding: "12px",
     fontSize: "16px",
     fontWeight: "600",
     color: "white",
     background: "#5865f2",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "4px",
     cursor: "pointer",
     transition: "all 0.2s ease",
     fontFamily: "inherit",
@@ -302,6 +234,5 @@ const styles = {
     fontSize: "14px",
     color: "#949ba4",
     textAlign: "center",
-    marginTop: "4px",
   },
 };

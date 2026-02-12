@@ -579,168 +579,1066 @@ export default function VoiceRoom({ roomId = "general", roomName = "General", on
       </div>
 
       <style>{`
-        .globalCallNotification {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.85);
-          backdrop-filter: blur(4px);
-          z-index: 10000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          animation: fadeIn 0.2s;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-
-        .callNotificationCard {
-          background: linear-gradient(135deg, rgba(30, 33, 36, 0.98), rgba(40, 43, 48, 0.98));
-          border: 2px solid rgba(88, 101, 242, 0.3);
-          border-radius: 20px;
-          padding: 32px;
-          max-width: 400px;
-          width: 100%;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-          animation: slideUp 0.3s;
-        }
-
-        .callNotificationHeader {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-
-        .callingIcon {
-          width: 64px;
-          height: 64px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 32px;
-          background: linear-gradient(135deg, #5865f2, #7289da);
-          border-radius: 50%;
-          animation: pulse 2s infinite;
-          box-shadow: 0 0 20px rgba(88, 101, 242, 0.4);
-        }
-
-        .callNotificationInfo {
-          flex: 1;
-        }
-
-        .callNotificationTitle {
-          font-size: 16px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.6);
-          margin-bottom: 4px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .callNotificationCaller {
-          font-size: 28px;
-          font-weight: 700;
-          color: white;
-        }
-
-        .callNotificationActions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .acceptCallBtn,
-        .rejectCallBtn {
-          flex: 1;
-          padding: 16px;
-          border: none;
-          border-radius: 12px;
-          font-size: 16px;
-          font-weight: 700;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          transition: all 0.2s;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .acceptCallBtn {
-          background: linear-gradient(135deg, #2ea043, #3fb950);
-          color: white;
-          box-shadow: 0 4px 12px rgba(46, 160, 67, 0.3);
-        }
-
-        .acceptCallBtn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(46, 160, 67, 0.4);
-        }
-
-        .rejectCallBtn {
-          background: linear-gradient(135deg, #d73a49, #f85149);
-          color: white;
-          box-shadow: 0 4px 12px rgba(215, 58, 73, 0.3);
-        }
-
-        .rejectCallBtn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(215, 58, 73, 0.4);
-        }
-
-        .currentUserBadge {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-left: auto;
-          margin-right: 12px;
-          padding: 6px 12px;
-          background: rgba(88, 101, 242, 0.1);
-          border-radius: 16px;
-          border: 1px solid rgba(88, 101, 242, 0.2);
-        }
-
-        .currentUserName {
-          font-size: 14px;
-          font-weight: 600;
-        }
-
-        .avatar.tiny {
-          width: 24px;
-          height: 24px;
-          font-size: 10px;
-          font-weight: 700;
-        }
-
-        .topbar-disconnect {
-          background: var(--danger);
-        }
-
-        @media (max-width: 768px) {
-          .callNotificationCard { padding: 24px; }
-          .callingIcon { width: 56px; height: 56px; font-size: 28px; }
-          .callNotificationCaller { font-size: 24px; }
-          .callNotificationActions { flex-direction: column; }
-          .currentUserName { display: none; }
-          .currentUserBadge { padding: 6px; background: transparent; border: none; }
-        }
+        /* ============================================
+        VOICE CHAT - COMPLETE UI STYLESHEET
+        Production-ready, copy-paste solution
+        Fixes: Recording indicator, timestamps, contrast, spacing
+        ============================================ */
+     
+     /* ============================================
+        CSS VARIABLES
+        ============================================ */
+     :root {
+       /* Brand Colors */
+       --primary: #5865f2;
+       --primary-hover: #4752c4;
+       --primary-dark: #3c45a5;
+       
+       /* Status Colors */
+       --success: #2ea043;
+       --success-hover: #26843a;
+       --danger: #d73a49;
+       --danger-hover: #c12838;
+       --warning: #faa81a;
+       --online: #3ba55d;
+       --offline: #80848e;
+       
+       /* Background Layers */
+       --bg-primary: #313338;
+       --bg-secondary: #2b2d31;
+       --bg-tertiary: #1e1f22;
+       --bg-elevated: #383a40;
+       --bg-modifier-hover: rgba(79, 84, 92, 0.16);
+       --bg-modifier-active: rgba(79, 84, 92, 0.24);
+       
+       /* Text Colors */
+       --text-primary: #f2f3f5;
+       --text-secondary: #b5bac1;
+       --text-muted: #80848e;
+       --text-link: #00a8fc;
+       
+       /* Message Bubbles */
+       --bubble-sent: #5865f2;
+       --bubble-received: rgba(255, 255, 255, 0.06);
+       --bubble-received-border: rgba(255, 255, 255, 0.12);
+       
+       /* Borders & Dividers */
+       --border-color: rgba(255, 255, 255, 0.08);
+       --border-subtle: rgba(255, 255, 255, 0.04);
+       
+       /* Shadows */
+       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+       --shadow-md: 0 4px 8px 0 rgba(0, 0, 0, 0.3);
+       --shadow-lg: 0 8px 16px 0 rgba(0, 0, 0, 0.4);
+       
+       /* Spacing */
+       --spacing-xs: 4px;
+       --spacing-sm: 8px;
+       --spacing-md: 12px;
+       --spacing-lg: 16px;
+       --spacing-xl: 20px;
+       
+       /* Border Radius */
+       --radius-sm: 4px;
+       --radius-md: 8px;
+       --radius-lg: 12px;
+       --radius-xl: 16px;
+       --radius-full: 9999px;
+       
+       /* Z-index Layers */
+       --z-base: 1;
+       --z-dropdown: 1000;
+       --z-modal: 5000;
+       --z-notification: 10000;
+     }
+     
+     /* ============================================
+        GLOBAL RESET
+        ============================================ */
+     * {
+       margin: 0;
+       padding: 0;
+       box-sizing: border-box;
+     }
+     
+     body {
+       font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+       background: var(--bg-primary);
+       color: var(--text-primary);
+       overflow: hidden;
+       -webkit-font-smoothing: antialiased;
+       -moz-osx-font-smoothing: grayscale;
+     }
+     
+     /* ============================================
+        LAYOUT - APP SHELL
+        ============================================ */
+     .appShell {
+       display: flex;
+       height: 100vh;
+       width: 100vw;
+       overflow: hidden;
+     }
+     
+     /* ============================================
+        SERVER BAR (Left sidebar)
+        ============================================ */
+     .serverBar {
+       width: 72px;
+       background: var(--bg-tertiary);
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+       padding: 12px 0;
+       gap: 8px;
+       overflow-y: auto;
+       flex-shrink: 0;
+     }
+     
+     .serverBar::-webkit-scrollbar {
+       width: 0;
+     }
+     
+     .serverDot {
+       width: 48px;
+       height: 48px;
+       border-radius: 50%;
+       background: var(--bg-primary);
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       cursor: pointer;
+       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+       position: relative;
+       color: var(--text-secondary);
+     }
+     
+     .serverDot::before {
+       content: '';
+       position: absolute;
+       left: -12px;
+       width: 0;
+       height: 0;
+       background: white;
+       border-radius: 0 4px 4px 0;
+       transition: all 0.2s;
+     }
+     
+     .serverDot:hover {
+       border-radius: 16px;
+       background: var(--primary);
+       color: white;
+     }
+     
+     .serverDot:hover::before {
+       width: 4px;
+       height: 20px;
+     }
+     
+     .serverDot.active {
+       border-radius: 16px;
+       background: var(--primary);
+       color: white;
+     }
+     
+     .serverDot.active::before {
+       width: 4px;
+       height: 40px;
+     }
+     
+     .serverDot.add {
+       background: transparent;
+       border: 2px dashed var(--border-color);
+       color: var(--success);
+     }
+     
+     .serverDot.add:hover {
+       background: var(--success);
+       border-color: var(--success);
+       color: white;
+     }
+     
+     /* ============================================
+        SIDEBAR (Channel list)
+        ============================================ */
+     .sidebar {
+       width: 240px;
+       background: var(--bg-secondary);
+       display: flex;
+       flex-direction: column;
+       flex-shrink: 0;
+       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+     }
+     
+     .backdrop {
+       display: none;
+     }
+     
+     @media (max-width: 768px) {
+       .sidebar {
+         position: fixed;
+         left: 0;
+         top: 0;
+         bottom: 0;
+         z-index: 999;
+         transform: translateX(-100%);
+       }
+       
+       .sidebar.open {
+         transform: translateX(0);
+       }
+       
+       .backdrop {
+         display: block;
+         position: fixed;
+         inset: 0;
+         background: rgba(0, 0, 0, 0.7);
+         z-index: 998;
+         animation: fadeIn 0.2s;
+       }
+       
+       .serverBar {
+         display: none;
+       }
+     }
+     
+     .sidebarHeader {
+       padding: 16px;
+       border-bottom: 1px solid var(--border-color);
+       font-weight: 700;
+       font-size: 16px;
+       display: flex;
+       align-items: center;
+       color: var(--text-primary);
+       cursor: pointer;
+       transition: background 0.15s;
+     }
+     
+     .sidebarHeader:hover {
+       background: var(--bg-modifier-hover);
+     }
+     
+     .sidebarScroll {
+       flex: 1;
+       overflow-y: auto;
+       padding: 8px;
+     }
+     
+     .sidebarScroll::-webkit-scrollbar {
+       width: 8px;
+     }
+     
+     .sidebarScroll::-webkit-scrollbar-track {
+       background: transparent;
+     }
+     
+     .sidebarScroll::-webkit-scrollbar-thumb {
+       background: var(--bg-tertiary);
+       border-radius: 4px;
+     }
+     
+     .sidebarScroll::-webkit-scrollbar-thumb:hover {
+       background: var(--bg-elevated);
+     }
+     
+     .sectionLabel {
+       padding: 8px 8px 4px;
+       font-size: 11px;
+       font-weight: 700;
+       color: var(--text-muted);
+       text-transform: uppercase;
+       letter-spacing: 0.5px;
+     }
+     
+     .userItem {
+       display: flex;
+       align-items: center;
+       padding: 8px;
+       border-radius: var(--radius-md);
+       cursor: pointer;
+       transition: background 0.15s;
+       gap: 12px;
+       margin: 2px 0;
+     }
+     
+     .userItem:hover {
+       background: var(--bg-modifier-hover);
+     }
+     
+     .userItem.active {
+       background: var(--bg-modifier-active);
+       color: white;
+     }
+     
+     .channelItem {
+       color: var(--text-secondary);
+     }
+     
+     .channelItem:hover,
+     .channelItem.active {
+       color: var(--text-primary);
+     }
+     
+     .channelIcon {
+       width: 24px;
+       height: 24px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       color: inherit;
+     }
+     
+     .avatar {
+       width: 32px;
+       height: 32px;
+       border-radius: 50%;
+       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-weight: 700;
+       font-size: 12px;
+       color: white;
+       flex-shrink: 0;
+       position: relative;
+     }
+     
+     .avatar.small {
+       width: 28px;
+       height: 28px;
+       font-size: 11px;
+     }
+     
+     .statusDot {
+       position: absolute;
+       bottom: -2px;
+       right: -2px;
+       width: 12px;
+       height: 12px;
+       border-radius: 50%;
+       border: 3px solid var(--bg-secondary);
+       background: var(--offline);
+     }
+     
+     .statusDot.online {
+       background: var(--online);
+     }
+     
+     .userMeta {
+       flex: 1;
+       min-width: 0;
+     }
+     
+     .userName {
+       font-size: 14px;
+       font-weight: 500;
+       color: var(--text-primary);
+       overflow: hidden;
+       text-overflow: ellipsis;
+       white-space: nowrap;
+     }
+     
+     .userStatus {
+       font-size: 12px;
+       color: var(--text-muted);
+     }
+     
+     /* ============================================
+        VOICE PANEL (Bottom of sidebar)
+        ============================================ */
+     .voicePanel {
+       background: var(--bg-tertiary);
+       border-top: 1px solid var(--border-color);
+       padding: 12px;
+     }
+     
+     .voiceHeader {
+       display: flex;
+       align-items: center;
+       font-size: 13px;
+       font-weight: 600;
+       color: var(--text-secondary);
+       margin-bottom: 8px;
+     }
+     
+     .voiceStatus {
+       display: flex;
+       align-items: center;
+       font-size: 12px;
+       padding: 6px 8px;
+       background: rgba(0, 0, 0, 0.2);
+       border-radius: var(--radius-md);
+       margin-bottom: 8px;
+     }
+     
+     .voiceControls {
+       display: flex;
+       gap: 8px;
+     }
+     
+     .voiceBtn {
+       flex: 1;
+       padding: 10px;
+       border: none;
+       border-radius: var(--radius-md);
+       background: var(--bg-elevated);
+       color: var(--text-primary);
+       cursor: pointer;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       transition: all 0.15s;
+     }
+     
+     .voiceBtn:hover {
+       background: var(--bg-modifier-hover);
+     }
+     
+     .voiceBtn:active {
+       transform: scale(0.95);
+     }
+     
+     /* ============================================
+        MAIN CONTENT AREA
+        ============================================ */
+     .main {
+       flex: 1;
+       display: flex;
+       flex-direction: column;
+       background: var(--bg-primary);
+       min-width: 0;
+     }
+     
+     .topbar {
+       height: 56px;
+       border-bottom: 1px solid var(--border-color);
+       display: flex;
+       align-items: center;
+       padding: 0 16px;
+       gap: 12px;
+       flex-shrink: 0;
+       background: var(--bg-primary);
+     }
+     
+     .menuBtn {
+       display: none;
+       width: 40px;
+       height: 40px;
+       border: none;
+       background: transparent;
+       color: var(--text-secondary);
+       border-radius: var(--radius-md);
+       cursor: pointer;
+       transition: all 0.15s;
+     }
+     
+     .menuBtn:hover {
+       background: var(--bg-modifier-hover);
+       color: var(--text-primary);
+     }
+     
+     @media (max-width: 768px) {
+       .menuBtn {
+         display: flex;
+         align-items: center;
+         justify-content: center;
+       }
+     }
+     
+     .channelInfo {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       flex: 1;
+       min-width: 0;
+     }
+     
+     .channelTitle {
+       font-size: 16px;
+       font-weight: 700;
+       color: var(--text-primary);
+       overflow: hidden;
+       text-overflow: ellipsis;
+       white-space: nowrap;
+     }
+     
+     /* ============================================
+        CHAT AREA
+        ============================================ */
+     .chatArea {
+       flex: 1;
+       overflow-y: auto;
+       padding: 16px;
+       display: flex;
+       flex-direction: column;
+       gap: 4px;
+     }
+     
+     .chatArea::-webkit-scrollbar {
+       width: 16px;
+     }
+     
+     .chatArea::-webkit-scrollbar-track {
+       background: transparent;
+       border-left: 4px solid transparent;
+       border-right: 4px solid transparent;
+       background-clip: padding-box;
+     }
+     
+     .chatArea::-webkit-scrollbar-thumb {
+       background: var(--bg-tertiary);
+       border: 4px solid transparent;
+       border-radius: 8px;
+       background-clip: padding-box;
+       min-height: 40px;
+     }
+     
+     .chatArea::-webkit-scrollbar-thumb:hover {
+       background: var(--bg-elevated);
+       border: 4px solid transparent;
+       background-clip: padding-box;
+     }
+     
+     /* System Messages */
+     .systemMsg {
+       display: flex;
+       align-items: center;
+       gap: 12px;
+       margin: 16px 0;
+       opacity: 0.5;
+     }
+     
+     .systemLine {
+       flex: 1;
+       height: 1px;
+       background: var(--border-color);
+     }
+     
+     .systemText {
+       font-size: 12px;
+       color: var(--text-muted);
+       font-weight: 500;
+       white-space: nowrap;
+     }
+     
+     /* Chat Messages */
+     .chatRow {
+       display: flex;
+       gap: 12px;
+       margin-bottom: 8px;
+       animation: slideIn 0.2s ease-out;
+     }
+     
+     @keyframes slideIn {
+       from {
+         opacity: 0;
+         transform: translateY(8px);
+       }
+       to {
+         opacity: 1;
+         transform: translateY(0);
+       }
+     }
+     
+     .chatRow.me {
+       flex-direction: row-reverse;
+     }
+     
+     .chatContent {
+       flex: 1;
+       min-width: 0;
+       display: flex;
+       flex-direction: column;
+       gap: 2px;
+     }
+     
+     .chatRow.me .chatContent {
+       align-items: flex-end;
+     }
+     
+     .chatMeta {
+       display: flex;
+       align-items: baseline;
+       gap: 8px;
+       padding: 0 4px;
+       margin-bottom: 2px;
+     }
+     
+     .chatName {
+       font-size: 14px;
+       font-weight: 600;
+       color: var(--text-primary);
+     }
+     
+     /* ✅ FIX: Timestamps - MUCH BETTER VISIBILITY */
+     .msgTime {
+       font-size: 12px;
+       font-weight: 500;
+       color: rgba(255, 255, 255, 0.5) !important; /* High contrast */
+       margin-left: 6px;
+     }
+     
+     .chatBubble {
+       padding: 10px 14px;
+       border-radius: var(--radius-lg);
+       max-width: 70%;
+       word-wrap: break-word;
+       position: relative;
+     }
+     
+     /* ✅ FIX: Message Bubbles - BETTER CONTRAST */
+     .myBubble {
+       background: var(--bubble-sent) !important;
+       color: white !important;
+       border-bottom-right-radius: 4px;
+     }
+     
+     .otherBubble {
+       background: var(--bubble-received) !important;
+       border: 1px solid var(--bubble-received-border) !important;
+       color: var(--text-primary) !important;
+       border-bottom-left-radius: 4px;
+     }
+     
+     .chatText {
+       font-size: 15px;
+       line-height: 1.5;
+       white-space: pre-wrap;
+     }
+     
+     /* ✅ FIX: My message timestamps - CLEARLY VISIBLE */
+     .myTime {
+       display: block;
+       text-align: right;
+       margin-top: 4px;
+       font-size: 11px;
+       color: rgba(255, 255, 255, 0.7) !important;
+       font-weight: 500;
+     }
+     
+     .chatAvatar {
+       width: 40px;
+       height: 40px;
+       flex-shrink: 0;
+     }
+     
+     .myAvatar {
+       background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+     }
+     
+     /* Reactions */
+     .reactionsDisplay {
+       display: flex;
+       flex-wrap: wrap;
+       gap: 4px;
+       margin-top: 4px;
+     }
+     
+     .reactionBubble {
+       display: flex;
+       align-items: center;
+       gap: 4px;
+       padding: 4px 8px;
+       border-radius: 12px;
+       background: var(--bg-modifier-hover);
+       border: 1px solid var(--border-color);
+       cursor: pointer;
+       transition: all 0.15s;
+       font-size: 13px;
+     }
+     
+     .reactionBubble:hover {
+       background: var(--bg-modifier-active);
+       transform: scale(1.05);
+     }
+     
+     .reactionBubble.myReaction {
+       background: rgba(88, 101, 242, 0.2);
+       border-color: var(--primary);
+     }
+     
+     .reactionEmoji {
+       font-size: 14px;
+     }
+     
+     .reactionCount {
+       font-size: 12px;
+       font-weight: 600;
+       color: var(--text-secondary);
+     }
+     
+     .addReaction {
+       display: flex;
+       gap: 4px;
+       margin-top: 4px;
+       opacity: 0;
+       transition: opacity 0.15s;
+     }
+     
+     .chatRow:hover .addReaction {
+       opacity: 1;
+     }
+     
+     .quickReact {
+       width: 24px;
+       height: 24px;
+       border: none;
+       background: var(--bg-modifier-hover);
+       border-radius: 50%;
+       cursor: pointer;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-size: 14px;
+       transition: all 0.15s;
+     }
+     
+     .quickReact:hover {
+       background: var(--bg-modifier-active);
+       transform: scale(1.1);
+     }
+     
+     /* Voice Messages */
+     .voiceMessage {
+       display: flex;
+       align-items: center;
+       gap: 12px;
+       min-width: 200px;
+     }
+     
+     .voicePlayBtn {
+       width: 36px;
+       height: 36px;
+       border-radius: 50%;
+       background: rgba(255, 255, 255, 0.1);
+       border: none;
+       color: white;
+       cursor: pointer;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-size: 14px;
+       transition: all 0.15s;
+       flex-shrink: 0;
+     }
+     
+     .voicePlayBtn:hover {
+       background: rgba(255, 255, 255, 0.2);
+       transform: scale(1.05);
+     }
+     
+     .voiceWaveform {
+       flex: 1;
+       min-width: 0;
+     }
+     
+     .voiceDuration {
+       font-size: 12px;
+       color: rgba(255, 255, 255, 0.7);
+       margin-bottom: 4px;
+       font-weight: 500;
+     }
+     
+     .waveformBars {
+       display: flex;
+       align-items: flex-end;
+       gap: 2px;
+       height: 24px;
+     }
+     
+     .waveBar {
+       flex: 1;
+       background: rgba(255, 255, 255, 0.3);
+       border-radius: 2px;
+       min-width: 2px;
+     }
+     
+     /* ============================================
+        CHAT COMPOSER
+        ============================================ */
+     .chatComposer {
+       padding: 16px;
+       background: var(--bg-primary);
+       flex-shrink: 0;
+     }
+     
+     .emojiBar {
+       display: flex;
+       gap: 4px;
+       margin-bottom: 8px;
+       flex-wrap: wrap;
+     }
+     
+     .emojiBtn {
+       width: 32px;
+       height: 32px;
+       border: none;
+       background: var(--bg-modifier-hover);
+       border-radius: var(--radius-md);
+       cursor: pointer;
+       font-size: 18px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       transition: all 0.15s;
+     }
+     
+     .emojiBtn:hover {
+       background: var(--bg-modifier-active);
+       transform: scale(1.1);
+     }
+     
+     /* ✅ FIX: Recording Bar - HIGHLY VISIBLE */
+     .recordingBar {
+       display: flex;
+       align-items: center;
+       gap: 12px;
+       padding: 12px 16px;
+       background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15));
+       border: 2px solid rgba(239, 68, 68, 0.4) !important;
+       border-radius: var(--radius-lg);
+       animation: glow 2s ease-in-out infinite;
+     }
+     
+     @keyframes glow {
+       0%, 100% {
+         box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+       }
+       50% {
+         box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+       }
+     }
+     
+     .recordingInfo {
+       flex: 1;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+     }
+     
+     /* ✅ FIX: Recording Indicator - SUPER VISIBLE */
+     .recordingIndicator {
+       display: flex;
+       align-items: center;
+       gap: 12px;
+     }
+     
+     .recordingDot {
+       width: 16px !important;
+       height: 16px !important;
+       background: #ef4444 !important;
+       border-radius: 50%;
+       animation: pulseRec 1.5s ease-in-out infinite !important;
+       box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+     }
+     
+     @keyframes pulseRec {
+       0%, 100% {
+         transform: scale(1);
+         box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+       }
+       50% {
+         transform: scale(1.2);
+         box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+       }
+     }
+     
+     .recordingTime {
+       font-size: 18px !important;
+       font-weight: 700 !important;
+       color: #ef4444 !important;
+       font-variant-numeric: tabular-nums;
+       letter-spacing: 1px;
+     }
+     
+     .cancelRecordBtn,
+     .sendRecordBtn {
+       width: 44px;
+       height: 44px;
+       border-radius: 50%;
+       border: none;
+       cursor: pointer;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-size: 20px;
+       font-weight: 700;
+       transition: all 0.15s;
+     }
+     
+     .cancelRecordBtn {
+       background: rgba(255, 255, 255, 0.1);
+       color: #ef4444;
+     }
+     
+     .cancelRecordBtn:hover {
+       background: rgba(239, 68, 68, 0.2);
+       transform: scale(1.1);
+     }
+     
+     .sendRecordBtn {
+       background: var(--success);
+       color: white;
+     }
+     
+     .sendRecordBtn:hover {
+       background: var(--success-hover);
+       transform: scale(1.1);
+     }
+     
+     .composerBox {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       padding: 12px 16px;
+       background: var(--bg-elevated);
+       border-radius: var(--radius-lg);
+     }
+     
+     .attachBtn,
+     .voiceRecordBtn {
+       width: 40px;
+       height: 40px;
+       border: none;
+       background: transparent;
+       color: var(--text-secondary);
+       border-radius: var(--radius-md);
+       cursor: pointer;
+       font-size: 20px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       transition: all 0.15s;
+       flex-shrink: 0;
+     }
+     
+     .attachBtn:hover,
+     .voiceRecordBtn:hover {
+       background: var(--bg-modifier-hover);
+       color: var(--text-primary);
+     }
+     
+     .composerInput {
+       flex: 1;
+       background: transparent;
+       border: none;
+       outline: none;
+       color: var(--text-primary);
+       font-size: 15px;
+       font-family: inherit;
+     }
+     
+     .composerInput::placeholder {
+       color: var(--text-muted);
+     }
+     
+     .sendBtn {
+       width: 40px;
+       height: 40px;
+       border-radius: 50%;
+       border: none;
+       background: var(--primary);
+       color: white;
+       cursor: pointer;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-size: 18px;
+       font-weight: 700;
+       transition: all 0.15s;
+       flex-shrink: 0;
+     }
+     
+     .sendBtn:hover {
+       background: var(--primary-hover);
+       transform: scale(1.05);
+     }
+     
+     .sendBtn:active {
+       transform: scale(0.95);
+     }
+     
+     .typingLine {
+       margin-top: 8px;
+       font-size: 13px;
+       color: var(--text-muted);
+       font-style: italic;
+       padding-left: 4px;
+     }
+     
+     /* ============================================
+        RESPONSIVE - MOBILE
+        ============================================ */
+     @media (max-width: 768px) {
+       .chatBubble {
+         max-width: 85%;
+       }
+       
+       .emojiBar {
+         gap: 2px;
+       }
+       
+       .emojiBtn {
+         width: 28px;
+         height: 28px;
+         font-size: 16px;
+       }
+       
+       .chatArea {
+         padding: 12px;
+       }
+       
+       .chatComposer {
+         padding: 12px;
+       }
+       
+       .topbar {
+         padding: 0 12px;
+       }
+     }
+     
+     /* ============================================
+        ANIMATIONS
+        ============================================ */
+     @keyframes fadeIn {
+       from {
+         opacity: 0;
+       }
+       to {
+         opacity: 1;
+       }
+     }
+     
+     @keyframes slideUp {
+       from {
+         transform: translateY(20px);
+         opacity: 0;
+       }
+       to {
+         transform: translateY(0);
+         opacity: 1;
+       }
+     }
+     
+     /* ============================================
+        UTILITY CLASSES
+        ============================================ */
+     .hidden {
+       display: none !important;
+     }
+     
+     .invisible {
+       visibility: hidden !important;
+     }
+     
+     .fadeIn {
+       animation: fadeIn 0.2s ease-in;
+     }
+     
+     .slideUp {
+       animation: slideUp 0.3s ease-out;
+      }
+       
       `}</style>
     </div>
   );
