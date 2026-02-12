@@ -1,6 +1,6 @@
 # Realtime Voice Chat System
 
-> A full-stack real-time chat and voice communication platform with text chat, voice messages, and live voice streaming.
+> A full-stack real-time chat and voice communication platform with text chat, voice messages, and live voice streaming. 
 
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4.x-010101?style=flat&logo=socket.io&logoColor=white)](https://socket.io/)

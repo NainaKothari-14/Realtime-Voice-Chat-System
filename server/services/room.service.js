@@ -1,13 +1,13 @@
 import * as roomsStore from "../stores/room.store.js";
 
-// ✅ Map to track users in each room
+// Map to track users in each room
 const roomUsers = new Map(); // roomId -> Map(socketId -> user)
 
 export async function getRoomList() {
   return roomsStore.getAllRooms();
 }
 
-// ✅ ADD THIS - alias for getRoomList (used in your controller)
+// ADD THIS - alias for getRoomList (used in your controller)
 export async function getActiveRooms() {
   return roomsStore.getAllRooms();
 }
@@ -24,7 +24,7 @@ export async function deleteRoom(roomId) {
   return roomsStore.removeRoom(roomId);
 }
 
-// ✅ ADD THIS - join room and track users
+// ADD THIS - join room and track users
 export async function joinRoom(roomId, socketId, user) {
   if (!roomUsers.has(roomId)) {
     roomUsers.set(roomId, new Map());
@@ -36,7 +36,7 @@ export async function joinRoom(roomId, socketId, user) {
   return Array.from(users.values());
 }
 
-// ✅ ADD THIS - leave room and update users
+// ADD THIS - leave room and update users
 export async function leaveRoom(roomId, socketId) {
   if (!roomUsers.has(roomId)) {
     return [];
@@ -53,7 +53,7 @@ export async function leaveRoom(roomId, socketId) {
   return Array.from(users.values());
 }
 
-// ✅ OPTIONAL - Get users in a specific room
+// Get users in a specific room
 export function getRoomUsers(roomId) {
   if (!roomUsers.has(roomId)) {
     return [];
